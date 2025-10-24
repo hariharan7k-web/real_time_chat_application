@@ -1,0 +1,114 @@
+// ----- server.js -----
+const http = require("http");
+const express = require("express");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+// Serve the single HTML file
+app.get("/", (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Realtime Chat</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #181818;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    margin: 0;
+  }
+  #chat {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    border-bottom: 1px solid #333;
+  }
+  #chat div {
+    margin: 5px 0;
+    padding: 8px;
+    background: #282828;
+    border-radius: 5px;
+  }
+  #form {
+    display: flex;
+    background: #222;
+  }
+  #input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    outline: none;
+    font-size: 16px;
+  }
+  #send {
+    background: #0078ff;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  #send:hover {
+    background: #005fd4;
+  }
+</style>
+</head>
+<body>
+  <div id="chat"></div>
+  <form id="form" action="">
+    <input id="input" autocomplete="off" placeholder="Type a message..." />
+    <button id="send">Send</button>
+  </form>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const chat = document.getElementById('chat');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input.value.trim()) {
+        socket.emit('chat message', input.value);
+        input.value = '';
+      }
+    });
+
+    socket.on('chat message', (msg) => {
+      const item = document.createElement('div');
+      item.textContent = msg;
+      chat.appendChild(item);
+      chat.scrollTop = chat.scrollHeight;
+    });
+  </script>
+</body>
+</html>
+  `);
+});
+
+// Socket.io handling
+io.on("connection", (socket) => {
+  console.log("A user connected");
+  socket.on("chat message", (msg) => {
+    io.emit("chat message", msg);
+  });
+  socket.on("disconnect", () => {
+    console.log("A user disconnected");
+  });
+});
+
+// Start server
+const PORT = 3000;
+server.listen(PORT, () => {
+  console.log("Server running on http://localhost:" + PORT);
+});
